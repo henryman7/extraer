@@ -3,12 +3,12 @@
   <head>
     <base target="_top">
     <script>
-      async function fetchIssueId() {
+      async function abrirYExtraerID() {
         const issueKey = document.getElementById("iusses").value.trim();
         const output = document.getElementById("id_iusses");
 
         if (!issueKey) {
-          alert("⚠️ Por favor, ingresa una historia.");
+          alert("⚠️ Ingresa una historia.");
           return;
         }
 
@@ -16,20 +16,20 @@
 
         try {
           const response = await fetch(url, {
-            method: 'GET',
             credentials: 'include'
           });
 
-          if (!response.ok) {
-            output.value = `❌ No encontrado (código ${response.status})`;
-            return;
-          }
+          const text = await response.text();
 
-          const data = await response.json();
-          output.value = data.id || "⚠️ ID no encontrado";
+          const match = text.match(/"id"\s*:\s*"(\d+)"/);
+          const id = match ? match[1] : "❌ ID no encontrado";
+
+          output.value = id;
+          console.log("✅ ID extraído:", id);
+
         } catch (err) {
+          console.error("❌ Error en fetch:", err);
           output.value = "❌ Error: " + err.message;
-          console.error("Error en fetchIssueId:", err);
         }
       }
     </script>
@@ -37,13 +37,13 @@
   <body>
     <h2>Extraer ID desde Jira</h2>
 
-    <label for="iusses">Historia:</label>
+    <label for="iusses">Historia (issue key):</label>
     <input id="iusses" type="text" placeholder="Ej: ABC-123" />
 
-    <button onclick="fetchIssueId()">Obtener ID</button>
+    <button onclick="abrirYExtraerID()">Extraer ID</button>
 
     <br><br>
-    <label for="id_iusses">ID del Issue:</label>
+    <label for="id_iusses">ID extraído:</label>
     <input id="id_iusses" type="text" readonly />
   </body>
 </html>
