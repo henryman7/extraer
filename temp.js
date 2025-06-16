@@ -1,8 +1,18 @@
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle("Extractor de ID Jira");
+}
+
+
+
 <!DOCTYPE html>
 <html>
   <head>
     <base target="_top">
     <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      input[type="text"] { width: 300px; padding: 5px; }
+      button { padding: 6px 12px; margin-top: 10px; }
       #log {
         margin-top: 20px;
         padding: 10px;
@@ -22,7 +32,7 @@
         output.value = "";
 
         if (!issueKey) {
-          log.textContent += "\n⚠️ Historia vacía.";
+          log.textContent += "\n⚠️ Por favor ingresa una historia.";
           return;
         }
 
@@ -36,8 +46,14 @@
 
           log.textContent += `\n📡 Estado HTTP: ${response.status}`;
 
+          if (!response.ok) {
+            log.textContent += `\n❌ Error: ${response.statusText}`;
+            output.value = "Error al consultar";
+            return;
+          }
+
           const body = await response.text();
-          log.textContent += `\n📥 Respuesta recibida: ${body.slice(0, 200)}...`;
+          log.textContent += `\n📥 Respuesta recibida:\n${body.slice(0, 300)}...`;
 
           const match = body.match(/"id"\s*:\s*"(\d+)"/);
           const id = match ? match[1] : null;
@@ -46,28 +62,28 @@
             log.textContent += `\n✅ ID extraído: ${id}`;
             output.value = id;
           } else {
-            log.textContent += `\n❌ No se encontró ID en el contenido.`;
-            output.value = "No encontrado";
+            log.textContent += `\n❌ No se encontró un ID válido.`;
+            output.value = "ID no encontrado";
           }
 
         } catch (err) {
           log.textContent += `\n🚨 Error en fetch: ${err.message}`;
+          output.value = "Error";
         }
       }
     </script>
   </head>
   <body>
-    <h2>Extraer ID desde Jira</h2>
+    <h2>🔎 Extraer ID de Jira</h2>
 
-    <label for="iusses">Historia (issue key):</label>
-    <input id="iusses" type="text" placeholder="Ej: ABC-123" />
+    <label for="iusses">Historia:</label><br>
+    <input id="iusses" type="text" placeholder="Ej: ABC-123"><br>
 
-    <button onclick="fetchIssueId()">Extraer ID</button>
+    <button onclick="fetchIssueId()">Obtener ID</button><br><br>
 
-    <br><br>
-    <label for="id_iusses">ID extraído:</label>
-    <input id="id_iusses" type="text" readonly />
+    <label for="id_iusses">ID extraído:</label><br>
+    <input id="id_iusses" type="text" readonly><br>
 
-    <div id="log">📝 Log de ejecución aparecerá aquí...</div>
+    <div id="log">📝 Log de ejecución...</div>
   </body>
 </html>
