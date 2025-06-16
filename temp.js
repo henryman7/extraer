@@ -1,11 +1,1 @@
-javascript:(function(){
-  const texto = document.body.innerText;
-  const match = texto.match(/"id"\s*:\s*"(\d+)"/);
-  if (match) {
-    const id = match[1];
-    navigator.clipboard.writeText(id);
-    alert("✅ ID encontrado y copiado: " + id);
-  } else {
-    alert("❌ No se encontró ningún ID (\"id\": \"xxxxx\") en esta página.");
-  }
-})();
+https://jira.globaldevtools.bbva.com/secure/CreateIssueDetails!init.jspa?pid=12345&issuetype=10001&summary=Nueva+Feature+automatica
