@@ -1,27 +1,7 @@
-function doGet() {
-  return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle("Extractor de ID Jira");
-}
-
-
-
 <!DOCTYPE html>
 <html>
   <head>
     <base target="_top">
-    <style>
-      body { font-family: Arial, sans-serif; padding: 20px; }
-      input[type="text"] { width: 300px; padding: 5px; }
-      button { padding: 6px 12px; margin-top: 10px; }
-      #log {
-        margin-top: 20px;
-        padding: 10px;
-        background: #f0f0f0;
-        border-left: 4px solid #2196F3;
-        font-family: monospace;
-        white-space: pre-wrap;
-      }
-    </style>
     <script>
       async function fetchIssueId() {
         const issueKey = document.getElementById("iusses").value.trim();
@@ -32,7 +12,7 @@ function doGet() {
         output.value = "";
 
         if (!issueKey) {
-          log.textContent += "\n⚠️ Por favor ingresa una historia.";
+          log.textContent += "\n⚠️ Historia vacía.";
           return;
         }
 
@@ -40,34 +20,20 @@ function doGet() {
         log.textContent += `\n🌐 Consultando: ${url}`;
 
         try {
-          const response = await fetch(url, {
-            credentials: 'include'
-          });
-
+          const response = await fetch(url, { credentials: 'include' });
           log.textContent += `\n📡 Estado HTTP: ${response.status}`;
 
-          if (!response.ok) {
-            log.textContent += `\n❌ Error: ${response.statusText}`;
-            output.value = "Error al consultar";
-            return;
-          }
-
           const body = await response.text();
-          log.textContent += `\n📥 Respuesta recibida:\n${body.slice(0, 300)}...`;
+          log.textContent += `\n📥 Respuesta:\n${body.slice(0, 300)}...`;
 
           const match = body.match(/"id"\s*:\s*"(\d+)"/);
           const id = match ? match[1] : null;
 
-          if (id) {
-            log.textContent += `\n✅ ID extraído: ${id}`;
-            output.value = id;
-          } else {
-            log.textContent += `\n❌ No se encontró un ID válido.`;
-            output.value = "ID no encontrado";
-          }
+          output.value = id || "ID no encontrado";
+          log.textContent += id ? `\n✅ ID extraído: ${id}` : `\n❌ ID no encontrado`;
 
         } catch (err) {
-          log.textContent += `\n🚨 Error en fetch: ${err.message}`;
+          log.textContent += `\n🚨 Error: ${err.message}`;
           output.value = "Error";
         }
       }
