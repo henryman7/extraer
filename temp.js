@@ -1,51 +1,62 @@
+Code
+
 function doGet() {
-  return HtmlService.createHtmlOutputFromFile("index")
-    .setTitle("Extraer ID desde JSON Jira")
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setTitle("Consulta de Issue Jira");
 }
 
-function procesarTextoPegado(texto) {
+function getIssueIdConCredenciales(user, pass, issueKey) {
+  const url = `https://jira.globaldevtools.bbva.com/rest/api/2/issue/${issueKey}`;
+
+  const auth = "Basic " + Utilities.base64Encode(`${user}:${pass}`);
+  const headers = {
+    "Authorization": auth,
+    "Accept": "application/json"
+  };
+
+  const options = {
+    method: "get",
+    headers: headers,
+    muteHttpExceptions: true
+  };
+
   const log = [];
 
-  if (!texto || texto.trim() === "") {
-    log.push("⚠️ Texto vacío. No se puede procesar.");
+  try {
+    log.push("🔄 Enviando petición a Jira...");
+    const response = UrlFetchApp.fetch(url, options);
+    const status = response.getResponseCode();
+    const body = response.getContentText();
+
+    log.push(`📡 HTTP ${status}`);
+
+    if (status !== 200) {
+      log.push(`❌ Error en respuesta: ${body}`);
+      return { id: "", log };
+    }
+
+    const json = JSON.parse(body);
+    const id = json.id || null;
+
+    if (id) {
+      log.push(`✅ ID extraído: ${id}`);
+      return { id, log };
+    } else {
+      log.push("❌ ID no encontrado en JSON.");
+      return { id: "", log };
+    }
+
+  } catch (e) {
+    log.push(`🚨 Error en ejecución: ${e.message}`);
     return { id: "", log };
   }
-
-  log.push("🔄 Procesando texto recibido...");
-
-  // Intentamos extraer el ID usando regex primero
-  const match = texto.match(/"id"\s*:\s*"(\d+)"/);
-  if (match) {
-    const id = match[1];
-    log.push(`✅ ID encontrado mediante regex: ${id}`);
-    return { id, log };
-  }
-
-  // Si falla regex, intentar parsear como JSON
-  try {
-    const json = JSON.parse(texto);
-    if (json.id) {
-      log.push(`✅ ID encontrado en JSON parseado: ${json.id}`);
-      return { id: json.id, log };
-    } else {
-      log.push("❌ No se encontró 'id' en el objeto JSON.");
-    }
-  } catch (e) {
-    log.push("🚨 Error al parsear JSON: " + e.message);
-  }
-
-  return { id: "", log };
 }
 
 
 
 
-
-
-
-
-
+index
 
 <!DOCTYPE html>
 <html>
@@ -53,46 +64,55 @@ function procesarTextoPegado(texto) {
     <base target="_top">
     <style>
       body { font-family: Arial, sans-serif; padding: 20px; }
-      textarea { width: 100%; height: 200px; font-family: monospace; }
-      input { width: 300px; padding: 5px; }
-      button { padding: 6px 12px; margin-top: 10px; }
-      #log { margin-top: 20px; background: #f0f0f0; padding: 10px; font-family: monospace; white-space: pre-wrap; }
+      input, button { margin: 5px 0; padding: 6px; width: 100%; max-width: 400px; }
+      #log { margin-top: 20px; padding: 10px; background: #f0f0f0; font-family: monospace; white-space: pre-wrap; }
     </style>
     <script>
-      function enviarAlServidor() {
-        const texto = document.getElementById("respuesta_jira").value;
-        const output = document.getElementById("id_extraido");
-        const log = document.getElementById("log");
+      function consultarId() {
+        const user = document.getElementById("user").value.trim();
+        const pass = document.getElementById("pass").value.trim();
+        const issueKey = document.getElementById("issueKey").value.trim();
+        const logDiv = document.getElementById("log");
+        const idField = document.getElementById("issueId");
 
-        log.textContent = "📡 Enviando texto al servidor...";
+        logDiv.textContent = "⏳ Consultando Jira...";
+        idField.value = "";
+
+        if (!user || !pass || !issueKey) {
+          logDiv.textContent = "⚠️ Todos los campos son obligatorios.";
+          return;
+        }
 
         google.script.run
           .withSuccessHandler(function(respuesta) {
-            log.textContent = respuesta.log.join("\n");
-            output.value = respuesta.id || "ID no encontrado";
+            logDiv.textContent = respuesta.log.join("\n");
+            idField.value = respuesta.id || "No encontrado";
           })
           .withFailureHandler(function(error) {
-            log.textContent = "❌ Error del servidor: " + error.message;
-            output.value = "Error";
+            logDiv.textContent = "❌ Error en servidor: " + error.message;
           })
-          .procesarTextoPegado(texto);
+          .getIssueIdConCredenciales(user, pass, issueKey);
       }
     </script>
   </head>
   <body>
-    <h2>📥 Pega el JSON de Jira y extrae el ID</h2>
+    <h2>🔐 Consulta de ID de Issue en Jira</h2>
 
-    <p>1️⃣ Copia el contenido JSON de Jira<br>
-    2️⃣ Pégalo aquí abajo<br>
-    3️⃣ Clic en “Extraer ID desde servidor”</p>
+    <label>Usuario Jira (sin @bbva.com)</label><br>
+    <input type="text" id="user" placeholder="Ej: henry.bbv"><br>
 
-    <textarea id="respuesta_jira" placeholder="Pega aquí el JSON..."></textarea><br>
+    <label>Contraseña o API Key</label><br>
+    <input type="password" id="pass"><br>
 
-    <button onclick="enviarAlServidor()">Extraer ID desde servidor</button><br><br>
+    <label>Clave de historia (Issue Key)</label><br>
+    <input type="text" id="issueKey" placeholder="Ej: ABC-123"><br>
 
-    <label for="id_extraido">ID extraído:</label><br>
-    <input id="id_extraido" type="text" readonly><br>
+    <button onclick="consultarId()">Consultar ID</button>
 
-    <div id="log">📝 Esperando procesamiento...</div>
+    <label>ID extraído:</label><br>
+    <input type="text" id="issueId" readonly><br>
+
+    <div id="log">📝 Log de ejecución aparecerá aquí...</div>
   </body>
 </html>
+
