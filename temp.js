@@ -1,35 +1,49 @@
 function doGet() {
   return HtmlService.createHtmlOutputFromFile("index")
-    .setTitle("Jira Issue ID");
+    .setTitle("Extraer ID desde JSON Jira")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function getIssueIdFromJira(issueKey) {
-  const url = `https://jira.globaldevtools.bbva.com/rest/api/2/issue/${issueKey}`;
+function procesarTextoPegado(texto) {
+  const log = [];
 
-  try {
-    const response = UrlFetchApp.fetch(url, {
-      method: "get",
-      muteHttpExceptions: true,
-      // Si se requiere autenticación, descomenta y usa esto:
-      // headers: { "Authorization": "Bearer TU_TOKEN" }
-    });
-
-    const status = response.getResponseCode();
-    const body = response.getContentText();
-
-    if (status !== 200) {
-      return `❌ Error ${status}: No se pudo obtener el issue`;
-    }
-
-    const match = body.match(/"id"\s*:\s*"(\d+)"/);
-    const id = match ? match[1] : null;
-
-    return id ? `✅ ID: ${id}` : "❌ ID no encontrado en la respuesta";
-
-  } catch (e) {
-    return "🚨 Error al conectar: " + e.message;
+  if (!texto || texto.trim() === "") {
+    log.push("⚠️ Texto vacío. No se puede procesar.");
+    return { id: "", log };
   }
+
+  log.push("🔄 Procesando texto recibido...");
+
+  // Intentamos extraer el ID usando regex primero
+  const match = texto.match(/"id"\s*:\s*"(\d+)"/);
+  if (match) {
+    const id = match[1];
+    log.push(`✅ ID encontrado mediante regex: ${id}`);
+    return { id, log };
+  }
+
+  // Si falla regex, intentar parsear como JSON
+  try {
+    const json = JSON.parse(texto);
+    if (json.id) {
+      log.push(`✅ ID encontrado en JSON parseado: ${json.id}`);
+      return { id: json.id, log };
+    } else {
+      log.push("❌ No se encontró 'id' en el objeto JSON.");
+    }
+  } catch (e) {
+    log.push("🚨 Error al parsear JSON: " + e.message);
+  }
+
+  return { id: "", log };
 }
+
+
+
+
+
+
+
 
 
 
@@ -37,46 +51,48 @@ function getIssueIdFromJira(issueKey) {
 <html>
   <head>
     <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      textarea { width: 100%; height: 200px; font-family: monospace; }
+      input { width: 300px; padding: 5px; }
+      button { padding: 6px 12px; margin-top: 10px; }
+      #log { margin-top: 20px; background: #f0f0f0; padding: 10px; font-family: monospace; white-space: pre-wrap; }
+    </style>
     <script>
-      function fetchIssueId() {
-        const issueKey = document.getElementById("iusses").value.trim();
-        const output = document.getElementById("id_iusses");
+      function enviarAlServidor() {
+        const texto = document.getElementById("respuesta_jira").value;
+        const output = document.getElementById("id_extraido");
         const log = document.getElementById("log");
 
-        log.textContent = "🔄 Enviando al servidor...";
-        output.value = "";
-
-        if (!issueKey) {
-          log.textContent += "\n⚠️ Por favor, escribe una historia.";
-          return;
-        }
+        log.textContent = "📡 Enviando texto al servidor...";
 
         google.script.run
           .withSuccessHandler(function(respuesta) {
-            log.textContent += "\n📬 Respuesta del servidor recibida.";
-            output.value = respuesta;
+            log.textContent = respuesta.log.join("\n");
+            output.value = respuesta.id || "ID no encontrado";
           })
-          .withFailureHandler(function(err) {
-            log.textContent += "\n🚨 Error en servidor: " + err.message;
+          .withFailureHandler(function(error) {
+            log.textContent = "❌ Error del servidor: " + error.message;
             output.value = "Error";
           })
-          .getIssueIdFromJira(issueKey);
+          .procesarTextoPegado(texto);
       }
     </script>
   </head>
   <body>
-    <h2>🔎 Extraer ID de Jira desde el Servidor</h2>
+    <h2>📥 Pega el JSON de Jira y extrae el ID</h2>
 
-    <label for="iusses">Historia:</label><br>
-    <input id="iusses" type="text" placeholder="Ej: ABC-123"><br>
+    <p>1️⃣ Copia el contenido JSON de Jira<br>
+    2️⃣ Pégalo aquí abajo<br>
+    3️⃣ Clic en “Extraer ID desde servidor”</p>
 
-    <button onclick="fetchIssueId()">Obtener ID</button><br><br>
+    <textarea id="respuesta_jira" placeholder="Pega aquí el JSON..."></textarea><br>
 
-    <label for="id_iusses">Resultado:</label><br>
-    <input id="id_iusses" type="text" readonly><br>
+    <button onclick="enviarAlServidor()">Extraer ID desde servidor</button><br><br>
 
-    <div id="log" style="margin-top: 20px; background: #f0f0f0; padding: 10px; font-family: monospace;">
-      📝 Log de ejecución...
-    </div>
+    <label for="id_extraido">ID extraído:</label><br>
+    <input id="id_extraido" type="text" readonly><br>
+
+    <div id="log">📝 Esperando procesamiento...</div>
   </body>
 </html>
