@@ -1,15 +1,6 @@
-const equipoValue = document.getElementById("equipo")?.value || "";
-labelsInput.value = task.Labels + (equipoValue && equipoValue !== "Seleccione" ? ` ${equipoValue}` : "");
-
-
-
-const equipoValue = document.getElementById("equipo")?.value || "";
-labelsInput.value = task.Labels + (equipoValue && equipoValue !== "Seleccione" ? ` ${equipoValue}` : "");
-
-
-
-const labelsInput = document.createElement("input");
-const equipoValue = document.getElementById("equipo")?.value || "";
-labelsInput.value = task.Labels + (equipoValue && equipoValue !== "Seleccione" ? ` ${equipoValue}` : "");
-labelsInput.readOnly = true;
-inputsContainer.appendChild(labelsInput);
+if (field === "Labels") {
+  const equipo = document.getElementById("equipo")?.value || "";
+  input.value = task[field] + (equipo && equipo !== "Seleccione" ? ` ${equipo}` : "");
+} else {
+  input.value = task[field];
+}
