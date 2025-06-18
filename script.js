@@ -82,7 +82,12 @@
           ["Summary", "Description", "Labels"].forEach((field) => {
             const input = document.createElement("input");
             input.type = "text";
-            input.value = task[field];
+            if (field === "Labels") {
+              const equipo = document.getElementById("equipo")?.value || "";
+              input.value = task[field] + (equipo && equipo !== "Seleccione" ? ` ${equipo}` : "");
+            } else {
+              input.value = task[field];
+            }
             input.readOnly = true;
 
             // Add copy button with tooltip
